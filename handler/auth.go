@@ -2,22 +2,39 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/mor7eza/go-fiber-ticketing/database"
 	"github.com/mor7eza/go-fiber-ticketing/helpers"
 	"github.com/mor7eza/go-fiber-ticketing/models"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+///// REGISTER USER /////
 func Register(c *fiber.Ctx) error {
+	fmt.Println(c.Locals("user"))
 	user := new(models.User)
 	if err := c.BodyParser(user); err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"success": false,
 			"message": "Please review your input!",
 			"data":    err,
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	emailExists, _ := database.Db.Collection("users").CountDocuments(ctx, bson.D{{Key: "email", Value: user.Email}})
+
+	if emailExists > 0 {
+		return c.Status(400).JSON(fiber.Map{
+			"success": false,
+			"message": "Email already exists",
+			"data":    nil,
 		})
 	}
 
@@ -32,8 +49,6 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	user.Password = hashedPassword
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	res, err := database.Db.Collection("users").InsertOne(ctx, user)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
@@ -60,5 +75,17 @@ func Register(c *fiber.Ctx) error {
 			"jwt": token,
 		},
 	})
-
 }
+
+///// LOGIN USER /////
+// func Login(c *fiber.Ctx) error{
+// 	user:=new(models.User)
+// 	if err:=c.BodyParser(user);err!=nil{
+// 		return c.Status(400).JSON(fiber.Map{
+// 			"success":false,
+// 			"message":"Bad request",
+// 			"data":nil,
+// 		})
+// 	}
+
+// }

@@ -4,6 +4,8 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	jwtware "github.com/gofiber/jwt/v2"
 	"github.com/mor7eza/go-fiber-ticketing/database"
 	"github.com/mor7eza/go-fiber-ticketing/router"
 )
@@ -11,9 +13,18 @@ import (
 func main() {
 	app := fiber.New()
 
-	database.Connect()
+	api := app.Group("/api", logger.New())
 
-	router.SetupRoutes(app)
+	// Setup Public Routes
+	router.SetupPublicRoutes(api)
+
+	app.Use(jwtware.New(jwtware.Config{
+		SigningKey: []byte("ThisIsSecret"),
+	}))
+
+	// Setup Private Routes
+
+	database.Connect()
 
 	log.Fatal(app.Listen(":3000"))
 }
