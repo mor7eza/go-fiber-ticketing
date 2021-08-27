@@ -20,9 +20,20 @@ func main() {
 
 	app.Use(jwtware.New(jwtware.Config{
 		SigningKey: []byte("ThisIsSecret"),
+		ErrorHandler: func(c *fiber.Ctx, e error) error {
+			return c.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+				"success": false,
+				"message": "Invalid or Expired JWT Token",
+				"data":    e,
+			})
+		},
 	}))
 
 	// Setup Private Routes
+
+	api.Get("/test", func(c *fiber.Ctx) error {
+		return c.SendStatus(200)
+	})
 
 	database.Connect()
 
